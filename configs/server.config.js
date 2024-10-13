@@ -1,0 +1,83 @@
+require("dotenv").config();
+
+const PORT = process.env.PORT;
+const MONGO_URI = process.env.MONGO_URI;
+const DB_NAME = process.env.DB_NAME;
+const JWT_SECRET = process.env.JWT_SECRET;
+const MAIL_NOREPLAY = process.env.MAIL_NOREPLAY;
+const MAIL_HOST = process.env.MAIL_HOST;
+const MAIL_PORT = process.env.MAIL_PORT;
+const MAIL_USERNAME = process.env.MAIL_USERNAME;
+const MAIL_PASSWORD = process.env.MAIL_PASSWORD;
+const Brevo_API_KEY_V3 = process.env.Brevo_API_KEY_V3;
+const AWS_REGION = process.env.AWS_REGION;
+const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
+const AWS_S3_BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
+const AWS_URL = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`;
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY;
+const WEB_HOOK_SECRET = process.env.WEB_HOOK_SECRET;
+const BASE_URL = process.env.BASE_URL;
+
+//localhost url
+const successUrl=process.env.successUrl;
+const cancelUrl=process.env.cancelUrl;
+//google
+GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+GOOGLE_REDIRECTED_URL = process.env.GOOGLE_REDIRECTED_URL;
+GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+
+//fedex
+FEDEX_TEST_URL = process.env.FEDEX_TEST_URL;
+FEDEX_API_KEY = process.env.FEDEX_API_KEY;
+FEDEX_SECRET_KEY = process.env.FEDEX_SECRET_KEY;
+FEDEX_ACCOUNT_NUMBER = process.env.FEDEX_ACCOUNT_NUMBER;
+
+FEDEX_BASE_URI = process.env.FEDEX_BASE_URI;
+
+//socket
+SOCKET_PORT = process.env.SOCKET_PORT;
+
+//twilio
+TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+TWILIO_ACCOUNT_AUTH_TOKEN = process.env.TWILIO_ACCOUNT_AUTH_TOKEN;
+TWILIO_ACCOUNT_PHONENUMBER = process.env.TWILIO_ACCOUNT_PHONENUMBER;
+
+module.exports = {
+  PORT,
+  MONGO_URI,
+  JWT_SECRET,
+  DB_NAME,
+  MAIL_HOST,
+  MAIL_PORT,
+  MAIL_USERNAME,
+  MAIL_PASSWORD,
+  MAIL_NOREPLAY,
+  Brevo_API_KEY_V3,
+  AWS_REGION,
+  AWS_SECRET_ACCESS_KEY,
+  AWS_ACCESS_KEY_ID,
+  AWS_S3_BUCKET_NAME,
+  AWS_URL,
+  STRIPE_SECRET_KEY,
+  STRIPE_PUBLISHABLE_KEY,
+  WEB_HOOK_SECRET,
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECTED_URL,
+  GOOGLE_API_KEY,
+  FEDEX_TEST_URL,
+  FEDEX_API_KEY,
+  FEDEX_SECRET_KEY,
+  FEDEX_ACCOUNT_NUMBER,
+  SOCKET_PORT,
+  FEDEX_BASE_URI,
+  TWILIO_ACCOUNT_SID,
+  TWILIO_ACCOUNT_AUTH_TOKEN,
+  TWILIO_ACCOUNT_PHONENUMBER,
+  BASE_URL,
+  successUrl,
+  cancelUrl,
+};
