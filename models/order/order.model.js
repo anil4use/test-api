@@ -51,6 +51,10 @@ const orderSchema = new mongoose.Schema(
         type: String,
         trim: true,
       },
+      stateOrProvinceCode: {
+        type: String,
+        trim: true,
+      },
       country: {
         type: String,
         trim: true,
@@ -68,12 +72,12 @@ const orderSchema = new mongoose.Schema(
         },
         vendorId: {
           type: String,
-          required: true,
+          required: false,
         },
         vendorType: {
           type: String,
-          enum: ["barnOwner", "serviceProvider", "rentalProduct","superAdmin"],
-          required: true,
+          enum: ["barnOwner", "serviceProvider", "rentalProduct", "superAdmin"],
+          required: false,
         },
         originalPrice: {
           type: Number,
@@ -106,6 +110,14 @@ const orderSchema = new mongoose.Schema(
           trim: true,
         },
         servicePurchaseDay: {
+          type: String,
+          trim: true,
+        },
+        trackingNumber: {
+          type: String,
+          trim: true,
+        },
+        level: {
           type: String,
           trim: true,
         },

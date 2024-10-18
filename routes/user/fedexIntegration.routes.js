@@ -5,7 +5,7 @@ const { shippingRate, tracking } = require("../../utils/helpers/tracking.utils")
 router
   .route("/getShippingRate")
   .post(express.json(),async (req, res) => {
-    try {  
+    try {
           const shippingRates = await shippingRate();
           return res.status(200).json({
             message: "Shipping rates retrieved successfully",

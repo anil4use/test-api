@@ -1,10 +1,18 @@
 const log = require("../../configs/logger.config");
 const addressDao = require("../../daos/address.dao");
+const adminDao = require("../../daos/admin.dao");
+const barnDao = require("../../daos/barn.dao");
 const cartDao = require("../../daos/cart.dao");
 const couponDao = require("../../daos/coupon.dao");
+const orderDao = require("../../daos/order.dao");
 const productDao = require("../../daos/product.dao");
 const userDao = require("../../daos/user.dao");
-const { shippingRate, createShippingRequest } = require("../../utils/helpers/tracking.utils");
+
+const {
+  shippingRate,
+  createShippingRequest,
+  validateAddress,
+} = require("../../utils/helpers/tracking.utils");
 const {
   validateUSAMobileNumber,
   validateEmail,
@@ -38,6 +46,7 @@ class CartService {
       }
 
       const isCartExist = await cartDao.getCartByUserIdAndStatus(userId);
+      console.log("ssssssssssss",isCartExist);
       const cartData = {
         item: cart,
         userId,
@@ -363,6 +372,42 @@ class CartService {
   async orderSummaryService(req, res) {
     try {
       const userId = req.userId;
+      const { addressId } = req.body;
+      if (!userId) {
+        return res.status(400).json({
+          message: "something went wrong",
+          success: "fail",
+          code: 201,
+          data: null,
+        });
+      }
+
+      let totalShippingCharge = 0;
+      let recipientAddress = null;
+      if (addressId) {
+        const addressDetail = await addressDao.getAddressById(
+          addressId,
+          userId
+        );
+
+        console.log("fffffffffffffff", addressDetail.data);
+        if (!addressDetail.data) {
+          return res.status(400).json({
+            message: "address not found",
+            success: "fail",
+            code: 201,
+            data: null,
+          });
+        }
+
+        recipientAddress = {
+          streetLines: addressDetail.data.street,
+          city: addressDetail.data.city,
+          postalCode: (addressDetail?.data?.zipCode).toString(),
+          countryCode: "US",
+          residential: true,
+        };
+      }
 
       const isUserExist = await userDao.getUserById(userId);
       if (!isUserExist.data) {
@@ -374,42 +419,216 @@ class CartService {
         });
       }
 
-      // const isCartExist = await cartDao.getCartByUserId(userId);
-      // console.log(isCartExist.data);
-      // console.log(isCartExist);
-      // const totalItem = isCartExist.data.item.length;
-      // const totalPrice = isCartExist.data.totalPrice;
-      // const shippingCharge = await shippingRate();
-      // const orderTotal = totalPrice + shippingCharge;
-      // const cartId = isCartExist.data.cartId;
-      // const orderSummary = {
-      //   items: totalItem,
-      //   totalPrice: totalPrice,
-      //   shipping: shippingCharge,
-      //   orderTotal: orderTotal,
-      // };
+      const isCartExist = await cartDao.getCartByUserId(userId);
+      
+      console.log(isCartExist.data);
+      console.log(isCartExist);
+      const totalItem = isCartExist.data.item.length;
+      console.log("total item", totalItem);
+      const totalPrice = isCartExist.data.totalPrice;
+      const cartItems = isCartExist.data.item;
+      let vendorAddress = null;
 
-      // if (isCartExist.data.item.length > 0) {
-      //   return res.status(200).json({
-      //     message: "order summary get successfully",
-      //     status: "success",
-      //     code: 200,
-      //     data: orderSummary,
-      //   });
-      // } else {
-      //   return res.status(201).json({
-      //     message: "cart is empty",
-      //     status: "success",
-      //     code: 200,
-      //     data: [],
+      for (const item of cartItems) {
+        console.log("ffffffffffffffffffffffffffffff", item.productId);
+        const product = await productDao.getProductById(item.productId);
+        console.log("ffffffffffffffffffffffff", product);
+
+        const admin = product?.data?.ownedBy;
+
+        if (admin?.startsWith("Barn_")) {
+          const barnDetail = await barnDao.getBarnById(admin);
+          const barnAddress = await barnDao.getBarnAddress(
+            barnDetail.data.location.latitude,
+            barnDetail.data.location.longitude
+          );
+
+          const address = barnAddress.data;
+          const addressDetail = address.split(",").map((part) => part.trim());
+
+          const country = addressDetail[addressDetail.length - 1];
+          const postalCode = addressDetail[addressDetail.length - 2];
+          const state = addressDetail[addressDetail.length - 3];
+          const city = addressDetail[addressDetail.length - 4];
+
+          vendorAddress = {
+            city: city,
+            postalCode: postalCode,
+            countryCode: "US",
+            residential: false,
+          };
+        } else {
+          const adminDetail = await adminDao.getById(admin);
+          vendorAddress = {
+            city: adminDetail.data.city,
+            postalCode: adminDetail.data.zipCode,
+            countryCode: "US",
+            residential: false,
+          };
+        }
+
+        const requestedPackageLineItems = Array(item.quantity).fill({
+          weight: {
+            units: "LB",
+            value: parseFloat(product?.data?.weight).toFixed(1),
+          },
+        });
+
+        const totalWeight = parseFloat(product?.data?.weight) * item.quantity;
+
+        const shippingCharge = await shippingRate(
+          vendorAddress,
+          recipientAddress,
+          requestedPackageLineItems,
+          totalWeight
+        );
+
+        totalShippingCharge += shippingCharge;
+      }
+
+      const orderTotal = totalPrice + totalShippingCharge;
+      const cartId = isCartExist.data.cartId;
+
+      const data = {
+        totalShippingCharge: totalShippingCharge,
+      };
+
+      const updatedCart = await cartDao.updateCartForShippingCharge(
+        userId,
+        data
+      );
+
+      const orderSummary = {
+        items: totalItem,
+        totalPrice: totalPrice,
+        shipping: totalShippingCharge || 0,
+        orderTotal: orderTotal,
+      };
+
+      if (isCartExist.data.item.length > 0) {
+        return res.status(200).json({
+          message: "order summary get successfully",
+          status: "success",
+          code: 200,
+          data: orderSummary,
+        });
+      } else {
+        return res.status(201).json({
+          message: "cart is empty",
+          status: "success",
+          code: 200,
+          data: [],
+        });
+      }
+
+      // const shipping = await validateAddress(recipientAddress);
+      // const { orderId } = req.body;
+      // const order = await orderDao.getOrderById(orderId);
+      // if (!order.data) {
+      //   return res.status({
+      //     message: "order not exist",
+      //     success: "fail",
+      //     code: 201,
+      //     data: null,
       //   });
       // }
-      const result=await createShippingRequest();
+      // const orderDetails = order.data;
+      // // const userId = orderDetails.user;
+      // const address = orderDetails.shippingInfo;
+      // console.log("sd", orderDetails);
+      // console.log("address", address);
+      // const itemId = orderDetails.orderItems[0]._id;
+      // const recipientAddress = {
+      //   streetLines: address?.street,
+      //   postalCode: (address?.zipCode).toString(),
+      //   city: address.city,
+      //   stateOrProvinceCode: address?.stateOrProvinceCode,
+      //   personName: `${address?.firstName} ${address?.lastName}`,
+      //   phoneNumber: (address?.contact).toString(),
+      // };
+
+      // console.log("recipientAddress", recipientAddress);
+
+      // let shippingDetail = null;
+
+      // for (const item of orderDetails?.orderItems) {
+      //   const product = await productDao.getProductById(item?.product);
+      //   const admin = product?.data?.ownedBy;
+      //   let vendorAddress;
+
+      //   if (admin?.startsWith("Barn_")) {
+      //     const barnDetail = await barnDao.getBarnById(admin);
+      //     const barnAddress = await barnDao.getBarnAddress(
+      //       barnDetail.data.location.latitude,
+      //       barnDetail.data.location.longitude
+      //     );
+
+      //     const address = barnAddress.data;
+      //     const addressDetail = address.split(",").map((part) => part.trim());
+      //     console.log("ffffffffffffffff", addressDetail);
+      //     const country = addressDetail[addressDetail.length - 1];
+      //     const postalCode = addressDetail[addressDetail.length - 2];
+      //     const state = addressDetail[addressDetail.length - 3];
+      //     const city = addressDetail[addressDetail.length - 4];
+      //     console.log("postal code ", postalCode);
+      //     console.log("ssssssssssssssssssssssssss");
+      //     vendorAddress = {
+      //       streetLines: barnDetail?.data?.contact?.address,
+      //       postalCode: postalCode,
+      //       city: city,
+      //       stateOrProvinceCode: barnDetail?.data?.contact?.stateOrProvinceCode,
+      //       personName: barnDetail?.data?.name,
+      //       phoneNumber: barnDetail?.data?.contact?.phoneNumber,
+      //     };
+      //   } else {
+      //     const adminDetail = await adminDao.getById(admin);
+      //     console.log("ssssssssssssssssssssssssss");
+      //     vendorAddress = {
+      //       streetLines: adminDetail.data.pickupAddress,
+      //       city: adminDetail.data.city,
+      //       postalCode: adminDetail.data.zipCode.toString(),
+      //       stateOrProvinceCode: adminDetail.data.stateOrProvinceCode,
+      //       personName: adminDetail?.data?.name,
+      //       phoneNumber: adminDetail?.data?.contact,
+      //     };
+      //   }
+
+      //   const requestedPackageLineItems = Array(item.quantity).fill({
+      //     weight: {
+      //       units: "LB",
+      //       value: parseFloat(product?.data?.weight).toFixed(1),
+      //     },
+      //   });
+
+      //   const totalWeight = parseFloat(product?.data?.weight) * item.quantity;
+      //   shippingDetail = await createShippingRequest(
+      //     vendorAddress,
+      //     recipientAddress,
+      //     requestedPackageLineItems,
+      //     totalWeight
+      //   );
+
+      //   const trackingNumber =
+      //     shippingDetail.transactionShipments[0].pieceResponses[0]
+      //       .trackingNumber;
+
+      //   const level =
+      //     shippingDetail.transactionShipments[0].pieceResponses[0]
+      //       .packageDocuments[0].url;
+
+      //   const order = await orderDao.updateTrackingDetail(
+      //     orderId,
+      //     itemId,
+      //     trackingNumber,
+      //     level
+      //   );
+      // }
+
       return res.status(200).json({
         message: "order summary get successfully",
         status: "success",
         code: 200,
-        data: result,
+        data: shippingDetail,
       });
     } catch (error) {
       log.error("error from [CART SERVICE]: ", error);

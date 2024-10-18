@@ -75,6 +75,22 @@ const productSchema = mongoose.Schema(
       type: String,
       trim: true,
     },
+    weight: {
+      type: Number,
+      trim: true,
+    },
+    length: {
+      type: Number,
+      trim: true,
+    },
+    width: {
+      type: Number,
+      trim: true,
+    },
+    height: {
+      type: Number,
+      trim: true,
+    },
     isRental: {
       type: Boolean,
       trim: true,

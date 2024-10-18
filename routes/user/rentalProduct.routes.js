@@ -24,6 +24,8 @@ router.route("/rentalProduct").post(express.json(),JWT.authenticateJWT,async (re
       return res.status(500).json({ error: "Internal Server Error" });
     }
   });
+
+  
   router.route("/deleteRentalProduct").post(express.json(),JWT.authenticateJWT,async (req, res) => {
     try {
       const result = await rentalProduct.deleteRentalProduct(req, res);

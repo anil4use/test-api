@@ -17,6 +17,7 @@ class AddressService {
         street,
         state,
         city,
+        stateOrProvinceCode,
         country,
       } = req.body;
       const userId = req.userId;
@@ -29,6 +30,7 @@ class AddressService {
         !zipCode ||
         !street ||
         !state ||
+        !stateOrProvinceCode ||
         !city ||
         !country
       ) {
@@ -67,6 +69,7 @@ class AddressService {
         state: titleCase(state),
         city: titleCase(city),
         country: titleCase(country),
+        stateOrProvinceCode,
         userId,
       };
       const result = await addressDao.addAddress(data);
@@ -102,6 +105,7 @@ class AddressService {
         state,
         city,
         country,
+        stateOrProvinceCode,
       } = req.body;
       const userId = req.userId;
       if (
@@ -114,6 +118,7 @@ class AddressService {
         !zipCode ||
         !street ||
         !state ||
+        !stateOrProvinceCode ||
         !city ||
         !country
       ) {
@@ -140,6 +145,7 @@ class AddressService {
           status: "fail",
         });
       }
+
       console.log(addressId);
       const isExistAddress = await addressDao.getAddressById(addressId, userId);
       console.log(isExistAddress.data);
@@ -160,6 +166,7 @@ class AddressService {
         state: titleCase(state),
         city: titleCase(city),
         country: titleCase(country),
+        stateOrProvinceCode,
         userId,
       };
 

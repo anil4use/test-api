@@ -5,6 +5,8 @@ const RentBarnModel = require("../models/barn/barnrental.model");
 const productModel = require("../models/product/product.model");
 const serviceModel = require("../models/service/service.model");
 const staffModel = require("../models/staff/staff.model");
+const axios = require("axios");
+
 const { hashItem } = require("../utils/helpers/bcrypt.utils");
 const {
   dateFormatter,
@@ -728,13 +730,43 @@ class BarnDao {
     try {
       const barnDetail = await barnModel.findOne({ barnOwner: parent });
       console.log("FSD");
-      const result = await productModel.find({ ownedBy: barnDetail.barnId }).sort({_id:-1});
+      const result = await productModel
+        .find({ ownedBy: barnDetail.barnId })
+        .sort({ _id: -1 });
       if (result) {
         return {
           message: "products get successfully",
           success: "success",
           code: 200,
           data: result,
+        };
+      } else {
+        return {
+          message: "products not found",
+          success: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [BARN REVIEW DAO] : ", error);
+      throw error;
+    }
+  }
+
+  //get barn address using longitute and latitute
+  async getBarnAddress(latitude, longitude) {
+    try {
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+      );
+
+      if (response.data) {
+        return {
+          message: "address get successfully",
+          success: "success",
+          code: 200,
+          data: response.data.display_name,
         };
       } else {
         return {

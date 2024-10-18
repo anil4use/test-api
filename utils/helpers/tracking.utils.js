@@ -5,8 +5,11 @@ const {
   FEDEX_SECRET_KEY,
   FEDEX_ACCOUNT_NUMBER,
   FEDEX_TEST_URL,
+  TRACK_FEDEX_API_KEY,
+  TRACK_FEDEX_SECRET_KEY,
 } = require("../../configs/server.config");
 
+const {formatDate}=require("./common.utils");
 const authFedex = async () => {
   try {
     const inputPayload = qs.stringify({
@@ -32,7 +35,12 @@ const authFedex = async () => {
   }
 };
 
-const shippingRate = async () => {
+const shippingRate = async (
+  vendorAddress,
+  recipientAddress,
+  requestedPackageLineItems,
+  totalWeight
+) => {
   const authResult = await authFedex();
   const token = authResult.access_token;
   const headers = {
@@ -42,6 +50,8 @@ const shippingRate = async () => {
     Authorization: `Bearer ${token}`,
   };
 
+  console.log("packageDetails........", token);
+      console.log("formatDate(Date.now())",typeof formatDate(Date.now()));
   const inputPayload = {
     accountNumber: {
       value: FEDEX_ACCOUNT_NUMBER,
@@ -55,20 +65,26 @@ const shippingRate = async () => {
     requestedShipment: {
       shipper: {
         address: {
-          streetLines: ["1550 Union Blvd", "Suite 302"],
-          city: "Beverly Hills",
-          stateOrProvinceCode: "CA",
-          postalCode: "90210",
+          // city: "Beverly Hills",
+          // postalCode: "90210",
+          // countryCode: "US",
+          // residential: false,
+
+          city: vendorAddress.city,
+          postalCode: vendorAddress.postalCode,
           countryCode: "US",
           residential: false,
         },
       },
       recipient: {
         address: {
-          streetLines: ["1550 Union Blvd", "Suite 302"],
-          city: "Los Angeles",
-          stateOrProvinceCode: "CA",
-          postalCode: "90001",
+          // city: "Los Angeles",
+          // postalCode: "90001",
+          // countryCode: "US",
+          // residential: true,
+
+          city: recipientAddress.city,
+          postalCode: recipientAddress.postalCode,
           countryCode: "US",
           residential: true,
         },
@@ -76,50 +92,19 @@ const shippingRate = async () => {
       serviceType: "GROUND_HOME_DELIVERY",
       preferredCurrency: "USD",
       rateRequestType: ["ACCOUNT"],
-      shipDateStamp: "2024-10-22",
+      shipDateStamp: "2024-10-19",
       pickupType: "DROPOFF_AT_FEDEX_LOCATION",
-      requestedPackageLineItems: [
-        {
-          weight: {
-            units: "LB",
-            value: 10,
-          },
-          dimensions: {
-            length: 12,
-            width: 12,
-            height: 12,
-            units: "IN",
-          },
-
-          packagingType: "YOUR_PACKAGING",
-        },
-        {
-          weight: {
-            units: "LB",
-            value: 5, // Weight of second item
-          },
-          dimensions: {
-            length: 10, // Dimensions of second item
-            width: 8,
-            height: 6,
-            units: "IN",
-          },
-          packagingType: "YOUR_PACKAGING",
-        },
-        {
-          weight: {
-            units: "LB",
-            value: 15, // Weight of third item
-          },
-          dimensions: {
-            length: 20, // Dimensions of third item
-            width: 16,
-            height: 14,
-            units: "IN",
-          },
-          packagingType: "YOUR_PACKAGING",
-        },
-      ],
+      requestedPackageLineItems: requestedPackageLineItems,
+      //  [
+      //   {
+      //     weight: {
+      //       units: "LB",
+      //       value: 10,
+      //     },
+      //   },
+      // ],
+      packagingType: "YOUR_PACKAGING",
+      totalWeight: totalWeight,
     },
   };
 
@@ -131,12 +116,25 @@ const shippingRate = async () => {
       headers: headers,
     }
   );
-  return response.data.output.rateReplyDetails[0].ratedShipmentDetails[0]
-    .totalNetFedExCharge;
+  return response?.data?.output?.rateReplyDetails[0]?.ratedShipmentDetails[0]
+    ?.totalNetFedExCharge;
 };
 
-const createShippingRequest = async () => {
+const createShippingRequest = async (
+  vendorAddress,
+  recipientAddress,
+  requestedPackageLineItems,
+  totalWeight
+) => {
   try {
+    console.log("vendorAddress", vendorAddress);
+
+    console.log("recipientAddress", recipientAddress);
+
+    console.log("requestedPackageLineItems", requestedPackageLineItems);
+
+    console.log("requestedPackageLineItems", totalWeight);
+
     const authResult = await authFedex();
     const token = authResult.access_token;
     const headers = {
@@ -146,276 +144,82 @@ const createShippingRequest = async () => {
       Authorization: `Bearer ${token}`,
     };
 
-    // const inputPayload = {
-    //   mergeLabelDocOption: "LABELS_AND_DOCS",
-    //   requestedShipment: {
-    //     shipDatestamp: "2024-10-17",
-    //     totalDeclaredValue: {
-    //       amount: 12.45,
-    //       currency: "USD",
-    //     },
-    //   },
-    //   shipper: {
-    //     address: {
-    //       streetLines: ["10 FedEx Parkway", "Suite 302"],
-    //       city: "Beverly Hills",
-    //       stateOrProvinceCode: "CA",
-    //       postalCode: "90210",
-    //       countryCode: "US",
-    //       residential: false,
-    //     },
-    //     contact: {
-    //       personName: "John Taylor",
-    //       emailAddress: "sample@company.com",
-    //       phoneExtension: "91",
-    //       phoneNumber: "7856567890",
-    //       companyName: "Fedex",
-    //     },
-    //     tins: [
-    //       {
-    //         number: "85961056701404100",
-    //         tinType: "FEDERAL",
-    //         usage: "usage",
-    //         effectiveDate: "2024-10-13",
-    //         expirationDate: "2024-10-13",
-    //       },
-    //     ],
-    //   },
-    //   soldTo: {
-    //     address: {
-    //       streetLines: ["10 FedEx Parkway", "Suite 302"],
-    //       city: "Beverly Hills",
-    //       stateOrProvinceCode: "CA",
-    //       postalCode: "90210",
-    //       countryCode: "US",
-    //       residential: false,
-    //     },
-    //     contact: {
-    //       personName: "John Taylor",
-    //       emailAddress: "sample@company.com",
-    //       phoneExtension: "91",
-    //       phoneNumber: "1234567890",
-    //       companyName: "Fedex",
-    //     },
-    //     tins: [
-    //       {
-    //         number: "123567",
-    //         tinType: "FEDERAL",
-    //         usage: "usage",
-    //         effectiveDate: "2000-10-10",
-    //         expirationDate: "2000-10-13",
-    //       },
-    //     ],
-    //     accountNumber: {
-    //       value: FEDEX_ACCOUNT_NUMBER,
-    //     },
-    //   },
-    //   recipients: [
-    //     {
-    //       address: {
-    //         streetLines: ["10 FedEx Parkway", "Suite 302"],
-    //         city: "Beverly Hills",
-    //         stateOrProvinceCode: "CA",
-    //         postalCode: "90210",
-    //         countryCode: "US",
-    //         residential: false,
-    //       },
-    //       contact: {
-    //         personName: "John Taylor",
-    //         emailAddress: "sample@company.com",
-    //         phoneExtension: "91",
-    //         phoneNumber: "8953456710",
-    //         companyName: "FedEx",
-    //       },
-    //       tins: [
-    //         {
-    //           number: "123567",
-    //           tinType: "FEDERAL",
-    //           usage: "usage",
-    //           effectiveDate: "2024-10-10",
-    //           expirationDate: "2000-01-13",
-    //         },
-    //       ],
-    //       deliveryInstructions: "Delivery Instructions",
-    //     },
-    //   ],
-    //   recipientLocationNumber: "1234567",
-    //   pickupType: "CONTACT_FEDEX_TO_SCHEDULE",
-    //   serviceType: "FEDEX_GROUND",
-    //   packagingType: "YOUR_PACKAGING",
-    //   totalWeight: 20.6,
-    //   shippingChargesPayment: {
-    //     paymentType: "SENDER",
-    //     payor: {
-    //       responsibleParty: {
-    //         address: {
-    //           streetLines: ["10 FedEx Parkway", "Suite 302"],
-    //           city: "Beverly Hills",
-    //           stateOrProvinceCode: "CA",
-    //           postalCode: "90210",
-    //           countryCode: "US",
-    //           residential: false,
-    //         },
-    //         contact: {
-    //           personName: "John Taylor",
-    //           emailAddress: "sample@company.com",
-    //           phoneExtension: "000",
-    //           phoneNumber: "5895345671",
-    //           companyName: "FedEx",
-    //         },
-    //         accountNumber: {
-    //           value: FEDEX_ACCOUNT_NUMBER,
-    //         },
-    //       },
-    //     },
-    //   },
-    //   labelSpecification: {
-    //     labelFormatType: "COMMON2D",
-    //     labelStockType: "PAPER_4X6",
-    //     imageType: "PDF",
-    //     labelPrintingOrientation: "BOTTOM_EDGE_OF_TEXT_FIRST",
-    //     requestedPackageLineItems: [
-    //       {
-    //         weight: {
-    //           units: "LB",
-    //           value: 68.25,
-    //         },
-    //       },
-    //     ],
-    //   },
-    //   labelResponseOptions: "URL_ONLY",
-    //   accountNumber: {
-    //     value: FEDEX_ACCOUNT_NUMBER,
-    //   },
-    //   shipAction: "CONFIRM",
-    //   processingOptionType: "ALLOW_ASYNCHRONOUS",
-    //   oneLabelAtATime: true,
-    // };
-
     const inputPayload = {
       requestedShipment: {
         shipper: {
-          contact: {
-            personName: "John Doe",
-            companyName: "Example Corp",
-            phoneNumber: "1234567890",
-            emailAddress: "john@example.com",
-          },
           address: {
-            streetLines: ["123 Main St", "Suite 100"],
-            city: "Los Angeles",
-            stateOrProvinceCode: "CA",
-            postalCode: "90001",
+            //   streetLines: ["123 FedEx Drive"],
+            //   stateOrProvinceCode: "NJ",
+            //   postalCode: "07716",
+            //   city: "New Jersey",
+
+            streetLines: [vendorAddress?.streetLines],
+            stateOrProvinceCode: vendorAddress?.stateOrProvinceCode,
+            postalCode: vendorAddress?.postalCode,
+            city: vendorAddress?.city,
             countryCode: "US",
-            residential: false,
+          },
+          contact: {
+            personName: vendorAddress?.personName,
+            phoneNumber: vendorAddress?.phoneNumber,
           },
         },
         recipients: [
           {
             address: {
-              streetLines: ["10 FedEx Parkway", "Suite 302"],
-              city: "Beverly Hills",
-              stateOrProvinceCode: "CA",
-              postalCode: "90210",
+              // streetLines: ["456 Elm St"],
+              // stateOrProvinceCode: "NM",
+              // city: "New Mexico",
+              // postalCode: "88201",
+              // countryCode: "US",
+
+              streetLines: [recipientAddress?.streetLines],
+              stateOrProvinceCode: recipientAddress?.stateOrProvinceCode,
+              postalCode: recipientAddress?.postalCode,
+              city: recipientAddress?.city,
               countryCode: "US",
-              residential: false,
+              residential: true,
             },
             contact: {
-              personName: "John Taylor",
-              emailAddress: "sample@company.com",
-              phoneExtension: "000",
-              phoneNumber: "8975813456", // Ensure this is a valid phone number
-              companyName: "FedEx",
+              personName: recipientAddress?.personName,
+              phoneNumber: recipientAddress?.phoneNumber,
             },
-            tins: [
-              {
-                number: "123567",
-                tinType: "FEDERAL",
-                usage: "usage",
-                effectiveDate: "2000-01-23T04:56:07.000+00:00",
-                expirationDate: "2000-01-23T04:56:07.000+00:00",
-              },
-            ],
-            deliveryInstructions: "Delivery Instructions",
           },
         ],
-        serviceType: "PRIORITY_OVERNIGHT", // Added service type
-        packagingType: "YOUR_PACKAGING", // Add appropriate packaging type
-        pickupType: "USE_SCHEDULED_PICKUP", // Added pickup type
+        pickupType: "CONTACT_FEDEX_TO_SCHEDULE",
+        serviceType: "GROUND_HOME_DELIVERY",
+        packagingType: "YOUR_PACKAGING",
+        // totalWeight: 10.6,
+        totalWeight: totalWeight,
         shippingChargesPayment: {
-          // Added shipping charges payment
-          paymentType: "SENDER", // or "RECIPIENT" based on your requirement
+          paymentType: "SENDER",
           payor: {
-            accountNumber: FEDEX_ACCOUNT_NUMBER,
-            countryCode: "US",
+            responsibleParty: {
+              accountNumber: {
+                value: 740561073,
+              },
+            },
           },
         },
         labelSpecification: {
-          labelFormatType: "COMMON2D",
-          labelStockType: "PAPER_7X475",
+          labelStockType: "PAPER_4X6",
           imageType: "PDF",
-          labelRotation: "UPSIDE_DOWN",
-          labelPrintingOrientation: "TOP_EDGE_OF_TEXT_FIRST",
         },
-        shippingDocumentSpecification: {
-          shippingDocumentTypes: ["INVOICE","RETURN_INSTRUCTIONS"], // Added document types
-          generalAgencyAgreementDetail: {
-            documentFormat: {
-              provideInstructions: true,
-              optionsRequested: {
-                options: [
-                  "SUPPRESS_ADDITIONAL_LANGUAGES",
-                  "SHIPPING_LABEL_LAST",
-                ],
-              },
-              stockType: "PAPER_LETTER",
-              dispositions: [
-                {
-                  eMailDetail: {
-                    eMailRecipients: [
-                      {
-                        emailAddress: "email@fedex.com",
-                        recipientType: "THIRD_PARTY",
-                      },
-                    ],
-                    locale: "en_US",
-                    grouping: "NONE",
-                  },
-                  dispositionType: "CONFIRMED",
-                },
-              ],
-              locale: "en_US",
-              docType: "PDF",
-            },
-          },
-        },
-        rateRequestType: ["LIST", "PREFERRED"],
-        preferredCurrency: "USD",
-        totalPackageCount: 1,
-        requestedPackageLineItems: [
-          {
-            sequenceNumber: "1",
-            weight: {
-              units: "LB",
-              value: 3.3,
-            },
-            dimensions: {
-              length: 12,
-              width: 8,
-              height: 4,
-              units: "IN",
-            },
-            itemDescription: "Sample Item",
-          },
-        ],
+        requestedPackageLineItems: requestedPackageLineItems,
+        //  [
+        //   {
+        //     weight: {
+        //       units: "LB",
+        //       // value: 10.6,
+        //       value: packageDetails?.weightValue,
+        //     },
+        //   },
+        // ],
       },
       labelResponseOptions: "URL_ONLY",
       accountNumber: {
-        value: FEDEX_ACCOUNT_NUMBER,
+        value: "740561073",
       },
-      shipAction: "CONFIRM",
-      processingOptionType: "ALLOW_ASYNCHRONOUS",
-      oneLabelAtATime: true,
     };
 
     const response = await axios.post(
@@ -434,24 +238,121 @@ const createShippingRequest = async () => {
       error.response.data.errors.forEach((err) => {
         console.log("Error Code:", err.code);
         console.log("Error Message:", err.message);
-        console.log("Invalid Parameters:", err.parameterList);
+        console.log("Invalid Parameters:", err);
       });
     }
   }
 };
-const tracking = async () => {
+
+//cancel shipment
+const cancelShipment = async (trackingId) => {
   try {
-    const result = await authFedex();
+    const authResult = await authFedex();
+    const token = authResult.access_token;
+    const headers = {
+      "content-type": "application/json",
+      "x-locale": "en_US",
+      "x-customer-transaction-id": "624deea6-b709-470c-8c39-4b5511281492",
+      Authorization: `Bearer ${token}`,
+    };
+
+    const inputPayload = {
+      accountNumber: {
+        value: "740561073",
+      },  
+      trackingNumber: trackingId,
+    };
+
+    const response = await axios.post(
+      `${FEDEX_TEST_URL}/ship/v1/shipments`,
+
+      inputPayload,
+      {
+        headers: headers,
+      }
+    );
+    return response.data.output;
+  } catch (error) {
+    console.error("FedEx API Error:", error.response?.data || error.message);
+
+    if (error.response?.data?.errors) {
+      error.response.data.errors.forEach((err) => {
+        console.log("Error Code:", err.code);
+        console.log("Error Message:", err.message);
+        console.log("Invalid Parameters:", err);
+      });
+    }
+  }
+};
+
+const trackAuthFedex = async () => {
+  try {
+    console.log("ddddddddd", TRACK_FEDEX_API_KEY, TRACK_FEDEX_SECRET_KEY);
+    const inputPayload = qs.stringify({
+      grant_type: "client_credentials",
+      client_id: TRACK_FEDEX_API_KEY,
+      client_secret: TRACK_FEDEX_SECRET_KEY,
+    });
+
+    const headers = {
+      "content-type": "application/x-www-form-urlencoded",
+    };
+
+    const response = await axios.post(
+      `${FEDEX_TEST_URL}/oauth/token`,
+      inputPayload,
+      {
+        headers: headers,
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.log(error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+const tracking = async (trackingId) => {
+  try {
+    const authResult = await trackAuthFedex();
+    const token = authResult.access_token;
+    console.log("token", token);
+    const headers = {
+      "content-type": "application/json",
+      "x-locale": "en_US",
+      "x-customer-transaction-id": "624deea6-b709-470c-8c39-4b5511281492",
+      Authorization: `Bearer ${token}`,
+    };
+
     const inputPayload = {
       includeDetailedScans: true,
       trackingInfo: [
         {
           trackingNumberInfo: {
-            trackingNumber: "122816215025810",
+            trackingNumber: trackingId,
           },
         },
       ],
     };
+
+    const response = await axios.post(
+      `${FEDEX_TEST_URL}/track/v1/trackingnumbers`,
+      inputPayload,
+      {
+        headers: headers,
+      }
+    );
+    return response.data.output;
+  } catch (error) {
+    console.log(error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+const validateAddress = async (recipientAddress) => {
+  try {
+    const result = await authFedex();
 
     const headers = {
       "content-type": "application/json",
@@ -459,8 +360,23 @@ const tracking = async () => {
       Authorization: `Bearer ${result.access_token}`,
     };
 
+    const inputPayload = {
+      includeDetailedScans: true,
+      addressesToValidate: [
+        {
+          address: {
+            streetLines: [recipientAddress.streetLines],
+            city: recipientAddress.city,
+            postalCode: recipientAddress.postalCode,
+            countryCode: "US",
+          },
+          clientReferenceId: "None",
+        },
+      ],
+    };
+
     const response = await axios.post(
-      `${FEDEX_TEST_URL}/track/v1/trackingnumbers`,
+      `${FEDEX_TEST_URL}/address/v1/addresses/resolve`,
       inputPayload,
       {
         headers: headers,
@@ -477,4 +393,6 @@ module.exports = {
   tracking,
   shippingRate,
   createShippingRequest,
+  validateAddress,
+  cancelShipment
 };

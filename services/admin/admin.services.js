@@ -25,6 +25,7 @@ class Admin {
         state,
         city,
         zipCode,
+        stateOrProvinceCode,
         businessName,
         businessAddress,
         homeAddress,
@@ -133,6 +134,7 @@ class Admin {
       } else {
         adminType = "productSeller";
       }
+        
       const isUserExist = await userDao.getUserByEmail(email);
       if (!isUserExist.data) {
         return res.status(201).json({
@@ -183,6 +185,7 @@ class Admin {
         homeAddress,
         shippingAddress,
         pickupAddress,
+        stateOrProvinceCode,
         bank: {
           accountHolder,
           ACHOrWireRoutingNumber,
@@ -345,6 +348,7 @@ class Admin {
         city,
         type,
         zipCode,
+        stateOrProvinceCode,
         businessName,
         businessAddress,
         homeAddress,
@@ -415,6 +419,7 @@ class Admin {
         state,
         city,
         zipCode,
+        stateOrProvinceCode,
         businessName,
         businessAddress,
         homeAddress,

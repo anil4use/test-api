@@ -6,6 +6,9 @@ const orderDao = require("../../daos/order.dao");
 const { removeNullUndefined } = require("../../utils/helpers/common.utils");
 const addressDao = require("../../daos/address.dao");
 const { productPaymentHook, rentalProductHook } = require("../../hook/payment");
+const adminDao = require("../../daos/admin.dao");
+const barnDao = require("../../daos/barn.dao");
+const { shippingRate } = require("../../utils/helpers/tracking.utils");
 class RentalProductService {
   async rentalOrderSummary(req, res) {
     try {
@@ -14,13 +17,14 @@ class RentalProductService {
       const userId = req.userId;
       console.log("ffffffffff", userId);
       console.log(req.body);
-      if (!userId || !productId || !quantity ||!addressId ||!days) {
+      if (!userId || !productId || !quantity || !days) {
         return res.status(400).json({
           message: "something went wrong",
           status: "fail",
           code: 201,
         });
       }
+
       const isProductExist = await productDao.getProductById(productId);
 
       if (!isProductExist.data) {
@@ -40,46 +44,112 @@ class RentalProductService {
           code: 201,
         });
       }
-      
-      if(addressId){
-        const isExistAddress=await addressDao.getAddressById(addressId);
-        if(isExistAddress.data){
-          return res.status(400).json({
-            message:"address not found",
-            code:201,
-            data:null,
-          })
-        }
-      }
 
-        
       let shippingCharge = 0;
 
       if (addressId) {
-        shippingCharge = 30;
+        const isExistAddress = await addressDao.getAddressById(
+          addressId,
+          userId
+        );
+        if (!isExistAddress.data) {
+          return res.status(400).json({
+            message: "address not found",
+            code: 201,
+            data: null,
+          });
+        }
+
+        let recipientAddress = null;
+
+        recipientAddress = {
+          streetLines: isExistAddress.data.street,
+          city: isExistAddress.data.city,
+          postalCode: (isExistAddress?.data?.zipCode).toString(),
+          countryCode: "US",
+          residential: true,
+        };
+
+        const admin = isProductExist?.data?.ownedBy;
+        let vendorAddress = null;
+
+        if (admin?.startsWith("Barn_")) {
+          const barnDetail = await barnDao.getBarnById(admin);
+          const barnAddress = await barnDao.getBarnAddress(
+            barnDetail.data.location.latitude,
+            barnDetail.data.location.longitude
+          );
+
+          const address = barnAddress.data;
+          const addressDetail = address.split(",").map((part) => part.trim());
+
+          const country = addressDetail[addressDetail.length - 1];
+          const postalCode = addressDetail[addressDetail.length - 2];
+          const state = addressDetail[addressDetail.length - 3];
+          const city = addressDetail[addressDetail.length - 4];
+
+          vendorAddress = {
+            city: city,
+            postalCode: postalCode,
+            countryCode: "US",
+            residential: false,
+          };
+        } else {
+          const adminDetail = await adminDao.getById(admin);
+          vendorAddress = {
+            city: adminDetail.data.city,
+            postalCode: adminDetail.data.zipCode,
+            countryCode: "US",
+            residential: false,
+          };
+        }
+
+        const requestedPackageLineItems = Array(quantity).fill({
+          weight: {
+            units: "LB",
+            value: parseFloat(isProductExist?.data?.weight).toFixed(1),
+          },
+        });
+
+        const totalWeight = parseFloat(isProductExist?.data?.weight) * quantity;
+
+        console.log(
+          "ssssssssssss",
+          vendorAddress,
+          recipientAddress,
+          requestedPackageLineItems,
+          totalWeight
+        );
+        shippingCharge = await shippingRate(
+          vendorAddress,
+          recipientAddress,
+          requestedPackageLineItems,
+          totalWeight
+        );
       }
 
-      const updateData={
+      const updateData = {
         days,
         addressId,
         shippingCharge,
-      }
+      };
+
       const rentalData = {
         userId,
         productId,
         quantity,
         days,
         addressId,
-        shippingCharge
+        shippingCharge,
       };
 
       let result = null;
       if (rentId) {
-        result = await rentalProductDao.updateRentalProduct(rentId,updateData);
+        result = await rentalProductDao.updateRentalProduct(rentId, updateData);
       } else {
         result = await rentalProductDao.createRentalProduct(rentalData);
       }
-      console.log("ddddddddd",result.data);
+      console.log("ddddddddd", result.data);
       let discountPrice = 0;
       const price =
         isProductExist.data.price -
@@ -90,16 +160,17 @@ class RentalProductService {
       if (result.data) {
         const totalItem = result.data.quantity;
         const totalPrice = price * totalItem * days;
-        const beforeTex = totalPrice + result?.data?.shippingCharge;
-        const tax = 0;
-        const orderTotal = beforeTex + tax;
+        const orderTotal = totalPrice + result?.data?.shippingCharge;
         const rentId = result.data.rentId;
+
         const orderSummary = {
           items: totalItem,
           totalPrice: totalPrice,
           shipping: result?.data?.shippingCharge,
-          beforeTex: beforeTex,
-          taxCollected: tax,
+
+          // beforeTex: beforeTex,
+          // taxCollected: tax,
+
           orderTotal: orderTotal,
           quantity: quantity,
           rentId: rentId,
@@ -138,7 +209,6 @@ class RentalProductService {
         !productId ||
         !days ||
         !quantity ||
-        !addressId ||
         !productOutDate ||
         !rentId
       ) {
@@ -168,6 +238,7 @@ class RentalProductService {
         });
       }
       let shippingInfo;
+
       if (addressId) {
         const isAddressExist = await addressDao.getAddressById(
           addressId,
@@ -181,6 +252,7 @@ class RentalProductService {
             data: null,
           });
         }
+
         shippingInfo = {
           firstName: isAddressExist?.data?.firstName,
           lastName: isAddressExist?.data?.lastName,
@@ -191,6 +263,7 @@ class RentalProductService {
           state: isAddressExist?.data?.state,
           city: isAddressExist?.data?.city,
           country: isAddressExist?.data?.country,
+          stateOrProvinceCode: isAddressExist?.data?.stateOrProvinceCode,
         };
       }
 
@@ -211,6 +284,7 @@ class RentalProductService {
           code: 201,
         });
       }
+
       const updateRent = await rentalProductDao.updateIsReturn(
         rentId,
         rentalData
@@ -229,14 +303,31 @@ class RentalProductService {
         quantity: quantity,
         coverImage: isProductExist.data.coverImage,
         product: productId,
+        vendorId: isProductExist.data.ownedBy,
+        vendorType: null,
       };
-      const taxPrice = 0;
-      const shippingPrice = result.data.shippingCharge;
 
+      const ownedBy = isProductExist.data.ownedBy;
+      const isAdmin = await adminDao.getById(ownedBy);
+      if (isAdmin.data) {
+        orderItem.vendorType = isAdmin.data.adminType;
+      } else {
+        const barnDetail = await barnDao.getBarnById(ownedBy);
+        if (barnDetail.data) {
+          const barnOwner = await adminDao.getById(barnDetail.data.barnOwner);
+          if (barnOwner.data) {
+            orderItem.vendorType = barnOwner.data.adminType;
+          }
+        }
+      }
+
+      const shippingPrice = result?.data?.shippingCharge;
+
+      let taxPrice = 0;
       const totalPrice =
-        days * orderItem.reducedPrice * quantity + taxPrice;
+        (days * orderItem.reducedPrice * quantity) + shippingPrice;
       console.log(totalPrice);
-     console.log("ffffffffffffffffffffffffffffffffffffff",totalPrice);
+      console.log("ffffffffffffffffffffffffffffffffffffff", totalPrice);
       const data = {
         shippingInfo: shippingInfo,
         orderItems: orderItem,
@@ -298,7 +389,7 @@ class RentalProductService {
       }
 
       const result = await rentalProductDao.deleteRentalProduct(rentId);
-      console.log("fddddddddddddddddd",result.data);
+      console.log("fddddddddddddddddd", result.data);
       if (!result.data) {
         return res.status(201).json({
           message: "rental delete fail",

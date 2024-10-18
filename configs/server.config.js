@@ -21,8 +21,8 @@ const WEB_HOOK_SECRET = process.env.WEB_HOOK_SECRET;
 const BASE_URL = process.env.BASE_URL;
 
 //localhost url
-const successUrl=process.env.successUrl;
-const cancelUrl=process.env.cancelUrl;
+const successUrl = process.env.successUrl;
+const cancelUrl = process.env.cancelUrl;
 //google
 GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -34,6 +34,10 @@ FEDEX_TEST_URL = process.env.FEDEX_TEST_URL;
 FEDEX_API_KEY = process.env.FEDEX_API_KEY;
 FEDEX_SECRET_KEY = process.env.FEDEX_SECRET_KEY;
 FEDEX_ACCOUNT_NUMBER = process.env.FEDEX_ACCOUNT_NUMBER;
+
+//fedex track account
+TRACK_FEDEX_API_KEY = process.env.TRACK_FEDEX_API_KEY;
+TRACK_FEDEX_SECRET_KEY = process.env.TRACK_FEDEX_SECRET_KEY;
 
 FEDEX_BASE_URI = process.env.FEDEX_BASE_URI;
 
@@ -80,4 +84,6 @@ module.exports = {
   BASE_URL,
   successUrl,
   cancelUrl,
+  TRACK_FEDEX_API_KEY,
+  TRACK_FEDEX_SECRET_KEY,
 };

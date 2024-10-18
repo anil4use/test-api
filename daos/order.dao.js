@@ -3,6 +3,8 @@ const userModel = require("../models/user.model");
 const log = require("../configs/logger.config");
 const getNextSequenceValue = require("../utils/helpers/counter.utils");
 const { removeNullUndefined } = require("../utils/helpers/common.utils");
+const barnDao = require("./barn.dao");
+const adminDao = require("./admin.dao");
 class OrderDao {
   async createOrder(data) {
     try {
@@ -86,6 +88,33 @@ class OrderDao {
       throw error;
     }
   }
+
+  async updatedOrder(orderId, data) {
+    try {
+      const result = await orderModel.findOneAndUpdate({ orderId }, data, {
+        new: true,
+      });
+
+      if (result) {
+        return {
+          message: "order updated successfully",
+          success: "success",
+          code: 200,
+          data: result,
+        };
+      } else {
+        return {
+          message: "order update fail",
+          success: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [ORDER DAO] : ", error);
+      throw error;
+    }
+  }
   //getAllUsersOrder
   // async getAllUsersOrder(userId) {
   //   try {
@@ -128,7 +157,12 @@ class OrderDao {
               quantity,
               coverImage,
               product: productId,
+              trackingNumber,
             } = item;
+
+            const shouldIncludeTracking = ["product", "rentalProduct"].includes(
+              order.orderType
+            );
             return {
               name,
               originalPrice,
@@ -137,7 +171,10 @@ class OrderDao {
               quantity,
               coverImage,
               productId,
+              trackingNumber: shouldIncludeTracking ? trackingNumber : null,
               deliveredAt: order.deliveredAt,
+              orderStatus: order.orderStatus,
+              totalPrice: order.totalPrice, 
             };
           });
           return products;
@@ -363,6 +400,128 @@ class OrderDao {
       } else {
         return {
           message: "no transaction found",
+          success: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [ORDER DAO] : ", error);
+      throw error;
+    }
+  }
+
+  //getAllOrder
+  async getAllOrder() {
+    try {
+      const result = await orderModel.find({ orderStatus: "paid" });
+
+      if (result) {
+        return {
+          message: "orders get successfully",
+          success: "success",
+          code: 200,
+          data: result,
+        };
+      } else {
+        return {
+          message: "no transaction found",
+          success: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [ORDER DAO] : ", error);
+      throw error;
+    }
+  }
+
+  async updateTrackingDetail(orderId, itemId, trackingNumber, level) {
+    try {
+      const result = await orderModel.findOneAndUpdate(
+        { orderId: orderId, "orderItems._id": itemId },
+        {
+          $set: {
+            "orderItems.$.trackingNumber": trackingNumber,
+            "orderItems.$.level": level,
+          },
+        }
+      );
+
+      if (result) {
+        return {
+          message: "orders get successfully",
+          success: "success",
+          code: 200,
+          data: result,
+        };
+      } else {
+        return {
+          message: "no transaction found",
+          success: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [ORDER DAO] : ", error);
+      throw error;
+    }
+  }
+  //getOrderByTrackingAndProduct
+  async getOrderByTrackingAndProduct(trackingId, productId) {
+    try {
+      console.log("trackingId", trackingId);
+      console.log("productId", productId);
+
+      const result = await orderModel.findOne({
+        orderItems: {
+          $elemMatch: {
+            trackingNumber: trackingId,
+            product: productId,
+          },
+        },
+      });
+      console.log("sdfsfs", result);
+
+      if (result) {
+        let ownerName;
+        if (result?.orderItems[0].vendorId.startsWith("Barn_")) {
+          const barnDetail = await barnDao.getBarnById(
+            result?.orderItems[0].vendorId
+          );
+          ownerName = barnDetail?.data?.name;
+        } else {
+          const adminDetail = await adminDao.getById(result?.vendorId);
+          ownerName = adminDetail?.data?.name;
+        }
+
+        const orderDetail = {
+          productName: result?.orderItems[0]?.name,
+          sender: ownerName,
+          reducedPrice: result?.totalPrice,
+          quantity:result?.orderItems[0]?.quantity,
+          coverImage: result?.orderItems[0]?.coverImage,
+          orderDate: result?.paidAt,
+          orderId: result?.orderId,
+          expectedDeliver: result.deliveredAt,
+        };
+
+        const recipientAddress = result?.shippingInfo;
+
+        return {
+          message: "orders get successfully",
+          success: "success",
+          code: 200,
+          data: {
+            orderDetail,
+            recipientAddress,
+          },
+        };
+      } else {
+        return {
+          message: "order not found",
           success: "fail",
           code: 201,
           data: null,

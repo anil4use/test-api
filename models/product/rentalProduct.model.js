@@ -32,19 +32,35 @@ const rentalProductSchema = new mongoose.Schema(
     returnedDate: {
       type: Date,
     },
+    weight: {
+      type: Number,
+      trim: true,
+    },
+    length: {
+      type: Number,
+      trim: true,
+    },
+    width: {
+      type: Number,
+      trim: true,
+    },
+    height: {
+      type: Number,
+      trim: true,
+    },
     isReturn: {
       type: Boolean,
       default: false,
     },
-    addressId:{
+    addressId: {
       type: String,
       ref: "Address",
       trim: true,
     },
-    shippingCharge:{
+    shippingCharge: {
       type: Number,
       trim: true,
-    }
+    },
   },
   {
     timestamps: true,

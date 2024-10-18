@@ -477,6 +477,10 @@ const barnSchema = new mongoose.Schema(
         type: String,
         trim: true,
       },
+      stateOrProvinceCode: {
+        type: String,
+        trim: true,
+      },
       websiteUrl: {
         type: String,
         trim: true,

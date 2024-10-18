@@ -22,6 +22,8 @@ class OrderService {
           data: null,
         });
       }
+      console.log("is address exist ",isAddressExist.data);
+      
       const cartExist = await cartDao.getCartByUserIdAndStatus(userId);
       if (!cartExist.data || cartExist.data.item.length === 0) {
         return res.status(400).json({
@@ -32,6 +34,7 @@ class OrderService {
         });
       }
       console.log(cartExist.data);
+
       const shippingInfo = {
         firstName: isAddressExist?.data?.firstName,
         lastName: isAddressExist?.data?.lastName,
@@ -42,16 +45,17 @@ class OrderService {
         state: isAddressExist?.data?.state,
         city: isAddressExist?.data?.city,
         country: isAddressExist?.data?.country,
+        stateOrProvinceCode:isAddressExist?.data?.stateOrProvinceCode,
       };
-     console.log("sssssssssssss",cartExist.data.item)
+      console.log("sssssssssssss", cartExist.data);
       const orderItems = await Promise.all(
         cartExist.data.item.map(async (item) => {
-          console.log("cccccc",item.product);
+          console.log("cccccc", item.product);
           let originalPrice = parseFloat(item.product.price);
           let discountPrice = parseFloat(item.product.discountPrice);
           const reducedPrice =
             originalPrice - (item.product.discount ? discountPrice : 0);
-        
+
           const orderItem = {
             name: item.product.name,
             originalPrice: originalPrice,
@@ -84,9 +88,11 @@ class OrderService {
         })
       );
 
-      console.log("orderItem", orderItems);
+      const ship=await cartDao.getCartByIdAndUserId(userId,cartExist?.data?.cartId);
+      const totalShippingCharge=ship?.data?.totalShippingCharge
       const taxPrice = 0;
-      const shippingPrice = 30;
+      const shippingPrice = Number(totalShippingCharge) || 0;
+      console.log("shippingPrice",typeof shippingPrice)
       const totalPrice =
         orderItems.reduce((acc, item) => {
           return acc + item.reducedPrice * item.quantity;
@@ -132,6 +138,33 @@ class OrderService {
     try {
       const userId = req.userId;
       const result = await orderDao.getAllUsersOrder(userId);
+      console.log(result.data);
+      if (result.data) {
+        return res.status(200).json({
+          message: "get order history successfully",
+          status: "success",
+          code: 200,
+          data: result.data,
+        });
+      } else {
+        return res.status(201).json({
+          message: "order history not found",
+          success: "fail",
+          code: 201,
+          data: null,
+        });
+      }
+    } catch (error) {
+      log.error("error from [ORDER SERVICE]: ", error);
+      throw error;
+    }
+  }
+
+  //getOrderService
+  async getOrderService(req, res) {
+    try {
+      const userId = req.userId;
+      const result = await orderDao.getAllOrder();
       console.log(result.data);
       if (result.data) {
         return res.status(200).json({

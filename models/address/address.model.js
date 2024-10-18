@@ -41,6 +41,10 @@ const addressSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    stateOrProvinceCode:{
+      type: String,
+      trim: true,
+    },
     country:{
         type: String,
         trim: true,

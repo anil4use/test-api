@@ -64,7 +64,6 @@ class Product {
   async getProductById(productId) {
     try {
       const result = await productModel.findOne({ productId });
-      console.log(result);
       if (result) {
         return {
           message: "product found",

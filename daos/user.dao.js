@@ -32,7 +32,6 @@ class UserDao {
   async getUserById(userId) {
     try {
       const user = await userModel.findOne({ userId: userId }, { password: 0 });
-      console.log("ggggggggggggggg", user);
       if (!user) {
         return {
           message: "user not found",

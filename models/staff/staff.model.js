@@ -106,6 +106,10 @@ const StaffSchema = new mongoose.Schema(
       type: Number,
       trim: true,
     },
+    stateOrProvinceCode:{
+      type: String,
+      trim: true,
+    },
     status: {
       type: String,
       trim: true,

@@ -15,6 +15,19 @@ router
       return res.status(500).json({ error: "Internal Server Error" });
     }
   });
+  
+  
+  router
+  .route("/rentalProductWebHook")
+  .post(express.raw({ type: "application/json" }),async (req, res) => {
+    try {
+      const result = await PaymentController.rentalProductWebHook(req, res);
+      return result;
+    } catch (error) {
+      log.error("Internal Server Error : ", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
 
   router
   .route("/subscriptionPaymentWebHook")

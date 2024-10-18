@@ -247,6 +247,8 @@ class Service {
       let shippingPrice = result.data.shippingCharge;
       console.log("fffffffffffffffffffff", shippingPrice);
       totalPrice = reducedPrice;
+
+      let vendor=null;
       const orderItem = {
         name,
         originalPrice,
@@ -257,7 +259,32 @@ class Service {
         totalPrice,
         service: serviceId,
         servicePurchaseDay,
+        vendorId:vendor?isServiceExist?.data?.providedBy:isServiceExist?.data?.ownedByBarn,
+        vendorType: null,
       };
+
+
+      console.log("dddddddddddddddddddddd",orderItem);
+
+
+
+      let ownedBy = isServiceExist?.data?.providedBy;
+      const isAdmin = await adminDao.getById(ownedBy);
+      if (isAdmin.data) {
+        orderItem.vendorType = isAdmin.data.adminType;
+      } else {
+        ownedBy = isServiceExist?.data?.ownedByBarn;
+        const barnDetail = await barnDao.getBarnById(ownedBy);
+        if (barnDetail.data) {
+          const barnOwner = await adminDao.getById(
+            barnDetail.data.barnOwner
+          );
+          if (barnOwner.data) {
+            orderItem.vendorType = barnOwner.data.adminType;
+          }
+        }
+      }
+
 
       if (addressId) {
         totalPrice = reducedPrice + shippingPrice;

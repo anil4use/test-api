@@ -71,7 +71,11 @@ const Cart = new mongoose.Schema(
     },
     couponId: {
       type: String,
-      trim:true,
+      trim: true,
+    },
+    totalShippingCharge: {
+      type: String,
+      trim: true,
     },
   },
   { timestamps: true }

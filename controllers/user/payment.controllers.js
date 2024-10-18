@@ -9,6 +9,16 @@ class PaymentController {
     }
   }
 
+  //rentalProductWebHook
+  async rentalProductWebHook(req, res) {
+    try {
+      const result = await PaymentHook.rentalProductWebHook(req, res);
+      return result;
+    } catch (error){
+      throw error;
+    }
+  }
+
   async subscriptionWebHook(req, res) {
     try {
       const result = await PaymentHook.subscriptionPaymentWebHook(req, res);

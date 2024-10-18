@@ -18,5 +18,16 @@ class OrderController {
       throw error;
     }
   }
+
+  //getOrder
+  async getOrder(req, res) {
+    try {
+      const result = await OrderService.getOrderService(req, res);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
 }
 module.exports = new OrderController();

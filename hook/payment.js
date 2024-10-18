@@ -20,6 +20,7 @@ const { randomString } = require("../utils/helpers/common.utils");
 const barnDao = require("../daos/barn.dao");
 const paymentDao = require("../daos/payment.dao");
 const adminDao = require("../daos/admin.dao");
+const { createShippingRequest } = require("../utils/helpers/tracking.utils");
 
 class PaymentHook {
   async productPaymentHook(result) {
@@ -117,7 +118,6 @@ class PaymentHook {
 
       let userId = null;
       async function handleCheckoutSessionCompleted(session) {}
-      console.log("cccccccccccccccccccccccccccccccccccccccccccccccccc");
       if (paymentStatus == "paid") {
         const totalPrice = 0;
         const order = await orderDao.getOrderById(orderId);
@@ -129,10 +129,103 @@ class PaymentHook {
             data: null,
           });
         }
+
         const orderDetails = order.data;
         const userId = orderDetails.user;
-        const address = orderDetails.address;
-        console.log("sd", orderDetails);
+        const address = orderDetails.shippingInfo;
+        console.log("sd", address);
+        const itemId = orderDetails.orderItems[0]._id;
+
+        const recipientAddress = {
+          streetLines: address?.street,
+          postalCode: (address?.zipCode).toString(),
+          city: address.city,
+          stateOrProvinceCode: address?.stateOrProvinceCode,
+          personName: `${address?.firstName} ${address?.lastName}`,
+          phoneNumber: (address?.contact).toString(),
+        };
+
+        console.log("rrrrrrrrrrrrrrrrrrrr", recipientAddress);
+        let shippingDetail = null;
+
+        for (const item of orderDetails?.orderItems) {
+          const product = await productDao.getProductById(item?.product);
+          const admin = product?.data?.ownedBy;
+          let vendorAddress;
+          console.log("hhhhhhhhhhhhhhh", admin);
+          if (admin?.startsWith("Barn_")) {
+            const barnDetail = await barnDao.getBarnById(admin);
+            const barnAddress = await barnDao.getBarnAddress(
+              barnDetail.data.location.latitude,
+              barnDetail.data.location.longitude
+            );
+
+            const address = barnAddress.data;
+            const addressDetail = address.split(",").map((part) => part.trim());
+
+            const country = addressDetail[addressDetail.length - 1];
+            const postalCode = addressDetail[addressDetail.length - 2];
+            const state = addressDetail[addressDetail.length - 3];
+            const city = addressDetail[addressDetail.length - 4];
+            console.log(typeof postalCode);
+
+            vendorAddress = {
+              streetLines: barnDetail?.data?.contact?.address,
+              postalCode: postalCode,
+              city: city,
+              stateOrProvinceCode:
+                barnDetail?.data?.contact?.stateOrProvinceCode,
+              personName: barnDetail?.data?.name,
+              phoneNumber: barnDetail?.data?.contact?.phoneNumber,
+            };
+          } else {
+            console.log("asdmin aidddddddddd", admin);
+            const adminDetail = await adminDao.getById(admin);
+            console.log("admin", adminDetail.data);
+            console.log("sssssssssssssssssssss", adminDetail?.data?.name);
+            vendorAddress = {
+              streetLines: adminDetail.data.pickupAddress,
+              city: adminDetail.data.city,
+              postalCode: adminDetail.data.zipCode.toString(),
+              stateOrProvinceCode: adminDetail.data.stateOrProvinceCode,
+              personName: adminDetail?.data?.name,
+              phoneNumber: adminDetail?.data?.contact,
+            };
+          }
+
+          const requestedPackageLineItems = Array(item.quantity).fill({
+            weight: {
+              units: "LB",
+              value: parseFloat(product?.data?.weight).toFixed(1),
+            },
+          });
+
+          console.log("sssssssssss", vendorAddress, recipientAddress);
+
+          const totalWeight = parseFloat(product?.data?.weight) * item.quantity;
+          shippingDetail = await createShippingRequest(
+            vendorAddress,
+            recipientAddress,
+            requestedPackageLineItems,
+            totalWeight
+          );
+
+          const trackingNumber =
+            shippingDetail.transactionShipments[0].pieceResponses[0]
+              .trackingNumber;
+
+          const level =
+            shippingDetail.transactionShipments[0].pieceResponses[0]
+              .packageDocuments[0].url;
+
+          const order = await orderDao.updateTrackingDetail(
+            orderId,
+            itemId,
+            trackingNumber,
+            level
+          );
+        }
+
         const vendorPayouts = orderDetails.orderItems.reduce((acc, item) => {
           const { vendorId, vendorType, reducedPrice, quantity } = item;
           const totalAmount = reducedPrice * quantity;
@@ -191,23 +284,30 @@ class PaymentHook {
           Object.entries(vendorPayouts).map(
             async ([vendorId, { vendorType, totalAmount }]) => {
               let email;
-              console.log("vvvvvvvvvvvvvvvvvvv",vendorType);
+              console.log("vvvvvvvvvvvvvvvvvvv", vendorType);
               if (vendorType === "barnOwner") {
-                console.log("vendorType",vendorId);
+                console.log("vendorType", vendorId);
                 const getBarnDetail = await barnDao.getBarnById(vendorId);
-                console.log("fffffffffffff",getBarnDetail.data.barnOwner);
+                console.log("fffffffffffff", getBarnDetail.data.barnOwner);
                 const adminDetail = await adminDao.getById(
                   getBarnDetail.data.barnOwner
                 );
-                console.log("sdgagga",adminDetail.data);
+                console.log("sdgagga", adminDetail.data);
                 email = adminDetail.data.email;
-                console.log("eeeeeeeeeeeeeeemaillllllllllllllll",email);
-                await paymentDao.processVendorPayout(adminDetail.data.staffId, email, totalAmount);
-
+                console.log("eeeeeeeeeeeeeeemaillllllllllllllll", email);
+                await paymentDao.processVendorPayout(
+                  adminDetail.data.staffId,
+                  email,
+                  totalAmount
+                );
               } else {
                 const adminDetail = await adminDao.getById(vendorId);
                 email = adminDetail.data.email;
-                await paymentDao.processVendorPayout(vendorId, email, totalAmount);
+                await paymentDao.processVendorPayout(
+                  vendorId,
+                  email,
+                  totalAmount
+                );
               }
             }
           )
@@ -306,8 +406,8 @@ class PaymentHook {
           enabled: false,
         },
         mode: "payment",
-        success_url: successUrl,
-        cancel_url: cancelUrl,
+        success_url: `${BASE_URL}/successUrl`,
+        cancel_url: `${BASE_URL}/cancelUrl`,
       });
 
       return {
@@ -322,7 +422,7 @@ class PaymentHook {
     }
   }
 
-  async productWebHook1(req, res) {
+  async rentalProductWebHook(req, res) {
     try {
       const sig = req.headers["stripe-signature"];
       console.log(sig);
@@ -374,6 +474,109 @@ class PaymentHook {
         const userId = orderDetails.user;
         console.log(orderDetails.user);
         console.log(userId);
+
+        const address = orderDetails?.shippingInfo;
+        console.log("sd", address);
+        let shippingDetail = null;
+
+        if (address) {
+          
+          const itemId = orderDetails.orderItems[0]._id;
+          const recipientAddress = {
+            streetLines: address?.street,
+            postalCode: (address?.zipCode).toString(),
+            city: address.city,
+            stateOrProvinceCode: address?.stateOrProvinceCode,
+            personName: `${address?.firstName} ${address?.lastName}`,
+            phoneNumber: (address?.contact).toString(),
+          };
+
+          for (const item of orderDetails?.orderItems) {
+            const product = await productDao.getProductById(item?.product);
+            const admin = product?.data?.ownedBy;
+            let vendorAddress;
+
+            if (admin?.startsWith("Barn_")) {
+              const barnDetail = await barnDao.getBarnById(admin);
+              const barnAddress = await barnDao.getBarnAddress(
+                barnDetail.data.location.latitude,
+                barnDetail.data.location.longitude
+              );
+              const address = barnAddress.data;
+              const addressDetail = address
+                .split(",")
+                .map((part) => part.trim());
+              const country = addressDetail[addressDetail.length - 1];
+              const postalCode = addressDetail[addressDetail.length - 2];
+              const state = addressDetail[addressDetail.length - 3];
+              const city = addressDetail[addressDetail.length - 4];
+              console.log(typeof postalCode);
+
+              vendorAddress = {
+                streetLines: barnDetail?.data?.contact?.address,
+                postalCode: postalCode,
+                city: city,
+                stateOrProvinceCode:
+                  barnDetail?.data?.contact?.stateOrProvinceCode,
+                personName: barnDetail?.data?.name,
+                phoneNumber: barnDetail?.data?.contact?.phoneNumber,
+              };
+            } else {
+              const adminDetail = await adminDao.getById(admin);
+              vendorAddress = {
+                streetLines: adminDetail.data.pickupAddress,
+                city: adminDetail.data.city,
+                postalCode: adminDetail.data.zipCode.toString(),
+                stateOrProvinceCode: adminDetail.data.stateOrProvinceCode,
+                personName: adminDetail?.data?.name,
+                phoneNumber: adminDetail?.data?.contact,
+              };
+            }
+
+            const requestedPackageLineItems = Array(item.quantity).fill({
+              weight: {
+                units: "LB",
+                value: parseFloat(product?.data?.weight).toFixed(1),
+              },
+            });
+
+            const totalWeight =
+              parseFloat(product?.data?.weight) * item.quantity;
+            shippingDetail = await createShippingRequest(
+              vendorAddress,
+              recipientAddress,
+              requestedPackageLineItems,
+              totalWeight
+            );
+
+            const trackingNumber =
+              shippingDetail.transactionShipments[0].pieceResponses[0]
+                .trackingNumber;
+
+            const level =
+              shippingDetail.transactionShipments[0].pieceResponses[0]
+                .packageDocuments[0].url;
+
+            const order = await orderDao.updateTrackingDetail(
+              orderId,
+              itemId,
+              trackingNumber,
+              level
+            );
+          }
+        }
+
+
+        const data = {
+          paymentId: paymentId,
+          orderStatus: paymentStatus,
+          paidAt: Date.now(),
+          orderType: "rentalProduct",
+        };
+
+        const updatedOrder = await orderDao.updatedOrder(orderId, data);
+        console.log(updatedOrder);
+
         await Promise.all(
           orderDetails.orderItems.map(async (item) => {
             const productId = item.product;
@@ -384,16 +587,6 @@ class PaymentHook {
             );
           })
         );
-
-        const data = {
-          paymentId: paymentId,
-          orderStatus: paymentStatus,
-          paidAt: Date.now(),
-          orderType: "rentalProduct",
-        };
-        const updatedOrder = await orderDao.updatedOrder(orderId, data);
-        console.log(updatedOrder);
-        const updateCart = await cartDao.resetCartByUserId(userId);
 
         return res.status(200).json({
           message: "details updated successfully",
@@ -442,8 +635,8 @@ class PaymentHook {
           enabled: false,
         },
         mode: "payment",
-        success_url: successUrl,
-        cancel_url: cancelUrl,
+        success_url: `${BASE_URL}/successUrl`,
+        cancel_url: `${BASE_URL}/cancelUrl`,
       });
       return {
         message: "successfully",
@@ -588,8 +781,8 @@ class PaymentHook {
           enabled: false,
         },
         mode: "payment",
-        success_url: successUrl,
-        cancel_url: cancelUrl,
+        success_url: `${BASE_URL}/successUrl`,
+        cancel_url: `${BASE_URL}/cancelUrl`,
       });
 
       return {

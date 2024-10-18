@@ -51,6 +51,16 @@ const dateFormatter = (timestamp) => {
   return formattedDate;
 };
 
+
+const formatDate = (timestamp) => {
+  const date = new Date(timestamp);
+  const year = date.getFullYear().toString().slice(-2);
+  const month = String(date.getMonth() + 1).padStart(2, '0'); 
+  const day = String(date.getDate()).padStart(2, '0'); 
+
+  return `${year}-${month}-${day}`;
+};
+
 //currencyFormatter
 const currencyFormatter = (currency) => {
   if (currency === undefined) {
@@ -94,4 +104,5 @@ module.exports = {
   currencyFormatter,
   titleCase,
   couponCodeGenerator,
+  formatDate,
 };

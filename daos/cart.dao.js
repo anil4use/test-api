@@ -7,6 +7,7 @@ const couponModel = require("../models/coupon.model");
 class CartDao {
   async addCart(data) {
     try {
+      console.log("sfffffffffffff");
       const cartId = "CART_" + (await getNextSequenceValue("cart"));
       data.cartId = cartId;
 
@@ -30,7 +31,7 @@ class CartDao {
 
         let totalPrice = 0;
         let totalDiscount = 0;
-         console.log("fffffffffffffffffffffffffffff",response)
+        console.log("fffffffffffffffffffffffffffff", response);
         response = response.map((item) => {
           const originalPrice = item.product?.price;
           const discountAmount = item.product.discount
@@ -77,6 +78,7 @@ class CartDao {
   //updateCart
   async updateCart(userId, cartData) {
     try {
+      console.log("ssssssssssssssssss");
       const currentCart = await cartModel
         .findOne({
           userId: userId,
@@ -182,7 +184,10 @@ class CartDao {
         userId: userId,
       });
       let response = {};
+
+      console.log("result",result);
       if (result && result.item && result.item.length > 0) {
+        console.log("trtrfsadsafdsafasffsdfafaffdf");
         response = await Promise.all(
           result.item.map(async (data) => {
             const productId = data.productId;
@@ -196,15 +201,18 @@ class CartDao {
           })
         );
 
-        console.log(response);
+
+
+
 
         let totalPrice = 0;
         let totalDiscount = 0;
 
         response = response.map((item) => {
-          const originalPrice = item.product.price;
-          const discountAmount = item.product.discount
-            ? item.product.discountPrice
+            console.log("sdddddddddddddddddddddddddddddddddddd",item.product?.price)
+          const originalPrice = item.product?.price;
+          const discountAmount = item.product?.discount
+            ? item.product?.discountPrice
             : 0;
           const effectivePrice = originalPrice - discountAmount;
           return {
@@ -213,19 +221,17 @@ class CartDao {
             totalPrice: Number(effectivePrice.toFixed(2)),
           };
         });
-
-        console.log(response);
         const grandTotal = response.map((item) => {
           console.log(item.quantity);
-          return Number(item.totalPrice) * Number(item.quantity);
+          return Number(item?.totalPrice) * Number(item?.quantity);
         });
+
         console.log("grand total", grandTotal);
         let sum = 0;
 
         for (let i = 0; i < grandTotal.length; i++) {
           sum += grandTotal[i];
         }
-
         console.log("total sum", sum);
         const cartResponse = {
           cartId: result.cartId,
@@ -281,7 +287,7 @@ class CartDao {
           })
         );
 
-        console.log("cccccccccccccccccccccccccccccccccccc",response);
+        console.log("cccccccccccccccccccccccccccccccccccc", response);
 
         let totalPrice = 0;
         let totalDiscount = 0;
@@ -405,7 +411,7 @@ class CartDao {
         { $pull: { item: { productId } } },
         { new: true }
       );
-      console.log(result);
+      console.log("ffffffffffffffffffffffffffffffffff",result);
 
       if (result) {
         return {
@@ -572,6 +578,40 @@ class CartDao {
       } else {
         return {
           message: "coupon applied fail",
+          status: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [cart DAO] : ", error);
+      throw error;
+    }
+  }
+
+  //uupdate shipping charge
+  async updateCartForShippingCharge(userId, data) {
+    try {
+      console.log(userId, data);
+      const result = await cartModel.findOneAndUpdate(
+        {
+          userId: userId,
+        },
+        data,
+        {
+          new: true,
+        }
+      );
+      if (result && result.item && result.item.length > 0) {
+        return {
+          message: "shipping price updated successfully",
+          status: "success",
+          code: 200,
+          data: result,
+        };
+      } else {
+        return {
+          message: "shipping price update fail",
           status: "fail",
           code: 201,
           data: null,
