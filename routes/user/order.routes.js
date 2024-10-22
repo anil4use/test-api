@@ -40,4 +40,16 @@ router
     }
   });
 
+  router
+  .route("/cancelOrder")
+  .post(express.json(),JWT.authenticateJWT, async (req, res) => {
+    try {
+      const result = await OrderController.cancelOrder(req, res);
+      return result;
+    } catch (error) {
+      log.error("Internal Server Error : ", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+
 module.exports = router;

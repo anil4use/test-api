@@ -7,10 +7,19 @@ const startOrderCleanupJob = () => {
     try {
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
 
-      const result = await Order.deleteMany({
+      const unpaidOrderCount = await Order.countDocuments({
         orderStatus: "unpaid",
         createdAt: { $lte: tenMinutesAgo },
       });
+
+      if (unpaidOrderCount > 0) {
+        const result = await Order.deleteMany({
+          orderStatus: "unpaid",
+          createdAt: { $lte: tenMinutesAgo },
+        });
+
+        console.log(`Deleted ${result.deletedCount} unpaid orders.`);
+      }
     } catch (error) {
       console.error("Error deleting unpaid orders:", error);
     }

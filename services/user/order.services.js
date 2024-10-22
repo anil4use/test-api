@@ -22,8 +22,8 @@ class OrderService {
           data: null,
         });
       }
-      console.log("is address exist ",isAddressExist.data);
-      
+      console.log("is address exist ", isAddressExist.data);
+
       const cartExist = await cartDao.getCartByUserIdAndStatus(userId);
       if (!cartExist.data || cartExist.data.item.length === 0) {
         return res.status(400).json({
@@ -45,7 +45,7 @@ class OrderService {
         state: isAddressExist?.data?.state,
         city: isAddressExist?.data?.city,
         country: isAddressExist?.data?.country,
-        stateOrProvinceCode:isAddressExist?.data?.stateOrProvinceCode,
+        stateOrProvinceCode: isAddressExist?.data?.stateOrProvinceCode,
       };
       console.log("sssssssssssss", cartExist.data);
       const orderItems = await Promise.all(
@@ -88,11 +88,14 @@ class OrderService {
         })
       );
 
-      const ship=await cartDao.getCartByIdAndUserId(userId,cartExist?.data?.cartId);
-      const totalShippingCharge=ship?.data?.totalShippingCharge
+      const ship = await cartDao.getCartByIdAndUserId(
+        userId,
+        cartExist?.data?.cartId
+      );
+      const totalShippingCharge = ship?.data?.totalShippingCharge;
       const taxPrice = 0;
       const shippingPrice = Number(totalShippingCharge) || 0;
-      console.log("shippingPrice",typeof shippingPrice)
+      console.log("shippingPrice", typeof shippingPrice);
       const totalPrice =
         orderItems.reduce((acc, item) => {
           return acc + item.reducedPrice * item.quantity;
@@ -154,6 +157,69 @@ class OrderService {
           data: null,
         });
       }
+    } catch (error) {
+      log.error("error from [ORDER SERVICE]: ", error);
+      throw error;
+    }
+  }
+
+  //cancelOrderService
+  async cancelOrderService(req, res) {
+    try {
+      const { orderId, orderItemId } = req.body;
+      const userId = req.userId;
+      console.log("sdfffffffffffff", orderItemId, orderId, userId);
+      if (!userId || !orderId || !orderItemId) {
+        return res.status(201).json({
+          message: "something went wrong",
+          status: "fail",
+          code: 201,
+          data: null,
+        });
+      }
+
+      const isOrderExist = await orderDao.getOrderById(orderId);
+      if (!isOrderExist.data) {
+        return res.status(201).json({
+          message: "order not found",
+          status: "fail",
+          code: 201,
+          data: null,
+        });
+      }
+
+      const isOrderItemExist = await orderDao.getOrderItem(orderItemId);
+
+      if (!isOrderItemExist.data) {
+        return res.status(201).json({
+          message: "order Item not found",
+          status: "fail",
+          code: 201,
+          data: null,
+        });
+      }
+
+      if (isOrderItemExist.data.orderItemStatus === "cancel") {
+        return res.status(201).json({
+          message: "Your order has already been canceled",
+          status: "fail",
+          code: 201,
+          data: null,
+        });
+      }
+
+      const updateOrderItemStatus = await orderDao.updateOrderItemStatus(
+        orderItemId
+      );
+
+      console.log("ssddddddddddddd", updateOrderItemStatus.data);
+
+      return res.status(200).json({
+        message: "order cancel successfully",
+        status: "success",
+        code: 200,
+        data: updateOrderItemStatus.data,
+      });
     } catch (error) {
       log.error("error from [ORDER SERVICE]: ", error);
       throw error;

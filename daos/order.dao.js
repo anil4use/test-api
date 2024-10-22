@@ -158,6 +158,7 @@ class OrderDao {
               coverImage,
               product: productId,
               trackingNumber,
+              orderItemStatus,
             } = item;
 
             const shouldIncludeTracking = ["product", "rentalProduct"].includes(
@@ -174,7 +175,8 @@ class OrderDao {
               trackingNumber: shouldIncludeTracking ? trackingNumber : null,
               deliveredAt: order.deliveredAt,
               orderStatus: order.orderStatus,
-              totalPrice: order.totalPrice, 
+              totalPrice: reducedPrice * quantity,
+              orderItemStatus: orderItemStatus,
             };
           });
           return products;
@@ -231,8 +233,46 @@ class OrderDao {
   async getOrderByUserIdAnProductId(userId, productId) {
     try {
       const result = await orderModel.findOne({
-        product: productId,
         user: userId,
+        orderItems: {
+          $elemMatch: {
+            product: productId,
+          },
+        },
+      });
+      if (result) {
+        return {
+          message: "order get successfully",
+          success: "success",
+          code: 200,
+          data: result,
+        };
+      } else {
+        return {
+          message: "order not found",
+          success: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [ORDER DAO] : ", error);
+      throw error;
+    }
+  }
+
+  //getOrderByUserIdAndServiceId
+  service;
+
+  async getOrderByUserIdAndServiceId(userId, serviceId) {
+    try {
+      const result = await orderModel.findOne({
+        user: userId,
+        orderItems: {
+          $elemMatch: {
+            service: serviceId,
+          },
+        },
       });
       if (result) {
         return {
@@ -501,7 +541,7 @@ class OrderDao {
           productName: result?.orderItems[0]?.name,
           sender: ownerName,
           reducedPrice: result?.totalPrice,
-          quantity:result?.orderItems[0]?.quantity,
+          quantity: result?.orderItems[0]?.quantity,
           coverImage: result?.orderItems[0]?.coverImage,
           orderDate: result?.paidAt,
           orderId: result?.orderId,
@@ -523,6 +563,74 @@ class OrderDao {
         return {
           message: "order not found",
           success: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [ORDER DAO] : ", error);
+      throw error;
+    }
+  }
+
+  //getOrderItem
+  async getOrderItem(orderItemId) {
+    try {
+      const result = await orderModel.findOne(
+        {
+          orderItems: { $elemMatch: { _id: orderItemId } },
+        },
+        {
+          "orderItems.$": 1,
+        }
+      );
+
+      console.log("dsffffffffffffffffffff");
+      if (result || result.orderItems || result.orderItems.length === 0) {
+        return {
+          message: "order get successfully",
+          status: "success",
+          code: 200,
+          data: result.orderItems[0],
+        };
+      } else {
+        return {
+          message: "order not found",
+          status: "fail",
+          code: 201,
+          data: null,
+        };
+      }
+    } catch (error) {
+      log.error("Error from [ORDER DAO] : ", error);
+      throw error;
+    }
+  }
+
+  async updateOrderItemStatus(orderItemId) {
+    try {
+      const result = await orderModel.findOneAndUpdate(
+        {
+          "orderItems._id": orderItemId,
+        },
+        {
+          $set: { "orderItems.$.orderItemStatus": "cancel" },
+        },
+        { new: true }
+      );
+
+      console.log("dsffffffffffffffffffff");
+      if (result || result.orderItems || result.orderItems.length === 0) {
+        return {
+          message: "order get successfully",
+          status: "success",
+          code: 200,
+          data: result.orderItems[0],
+        };
+      } else {
+        return {
+          message: "order not found",
+          status: "fail",
           code: 201,
           data: null,
         };

@@ -47,6 +47,7 @@ class Admin {
           code: 201,
         });
       }
+
       console.log("rreq", req.body);
       if (!validateEmail(email)) {
         return res.status(201).json({
@@ -68,7 +69,7 @@ class Admin {
       console.log("dfsssssssssssssssssssssssss");
 
       if (type === "barnOwner" || type === "serviceProvider") {
-        if (!businessName || !businessAddress || !homeAddress) {
+        if (!businessName || !businessAddress) {
           log.error("Error from [ADMIN SERVICES]: invalid Request");
           return res.status(400).json({
             message: "Invalid request",
@@ -134,7 +135,7 @@ class Admin {
       } else {
         adminType = "productSeller";
       }
-        
+
       const isUserExist = await userDao.getUserByEmail(email);
       if (!isUserExist.data) {
         return res.status(201).json({

@@ -21,6 +21,9 @@ class AddressService {
         country,
       } = req.body;
       const userId = req.userId;
+
+
+      console.log("dsfffffffff",req.body,userId);
       if (
         !userId ||
         !firstName ||

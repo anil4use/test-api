@@ -19,6 +19,16 @@ class OrderController {
     }
   }
 
+  //cancelOrder
+  async cancelOrder(req, res) {
+    try {
+      const result = await OrderService.cancelOrderService(req, res);
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   //getOrder
   async getOrder(req, res) {
     try {

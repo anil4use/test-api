@@ -121,6 +121,11 @@ const orderSchema = new mongoose.Schema(
           type: String,
           trim: true,
         },
+        orderItemStatus: {
+          type: String,
+          trim: true,
+          default: "pending",
+        },
       },
     ],
     user: {

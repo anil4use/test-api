@@ -274,6 +274,7 @@ class CartService {
           data: null,
         });
       }
+
       const data = {
         isCouponApplied: true,
         couponId: isCouponExist.data.couponId,
@@ -303,6 +304,7 @@ class CartService {
       throw error;
     }
   }
+
   //removeAppliedCouponService
   async removeAppliedCouponService(req, res) {
     try {
@@ -381,6 +383,8 @@ class CartService {
           data: null,
         });
       }
+
+
 
       let totalShippingCharge = 0;
       let recipientAddress = null;
@@ -489,8 +493,9 @@ class CartService {
       const orderTotal = totalPrice + totalShippingCharge;
       const cartId = isCartExist.data.cartId;
 
+      
       const data = {
-        totalShippingCharge: totalShippingCharge,
+        totalShippingCharge: totalShippingCharge.toFixed(2),
       };
 
       const updatedCart = await cartDao.updateCartForShippingCharge(
@@ -501,8 +506,8 @@ class CartService {
       const orderSummary = {
         items: totalItem,
         totalPrice: totalPrice,
-        shipping: totalShippingCharge || 0,
-        orderTotal: orderTotal,
+        shipping: (totalShippingCharge).toFixed(2) || 0,
+        orderTotal: (orderTotal).toFixed(2),
       };
 
       if (isCartExist.data.item.length > 0) {

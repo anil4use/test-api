@@ -39,7 +39,8 @@ const shippingRate = async (
   vendorAddress,
   recipientAddress,
   requestedPackageLineItems,
-  totalWeight
+  totalWeight,
+  shipDate,
 ) => {
   const authResult = await authFedex();
   const token = authResult.access_token;
@@ -52,6 +53,10 @@ const shippingRate = async (
 
   console.log("packageDetails........", token);
       console.log("formatDate(Date.now())",typeof formatDate(Date.now()));
+      console.log();
+      const date=formatDate(Date.now())
+      console.log(date);
+
   const inputPayload = {
     accountNumber: {
       value: FEDEX_ACCOUNT_NUMBER,
@@ -92,7 +97,7 @@ const shippingRate = async (
       serviceType: "GROUND_HOME_DELIVERY",
       preferredCurrency: "USD",
       rateRequestType: ["ACCOUNT"],
-      shipDateStamp: "2024-10-19",
+      shipDateStamp:date,
       pickupType: "DROPOFF_AT_FEDEX_LOCATION",
       requestedPackageLineItems: requestedPackageLineItems,
       //  [

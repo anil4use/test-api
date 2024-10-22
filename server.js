@@ -50,7 +50,7 @@ app.use("/api/v1/user", Address);
 app.use("/api/v1/user", Cart);
 app.use("/api/v1/user", Order);
 app.use("/api/v1/user", Service);
-app.use("/api/v1/user", Payment);
+app.use("/api/v1/user", Payment); 
 app.use("/api/v1/user", Event);
 app.use("/api/v1/user", Career);
 app.use("/api/v1/user", Track);

@@ -106,7 +106,6 @@ class BarnService {
         });
       }
       const isReviewExist = await barnDao.getBarnReview(barnId, userId);
-      console.log(isReviewExist.data);
       let result;
       const data = {
         userId: userId,

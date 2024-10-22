@@ -977,6 +977,7 @@ class UserService {
         });
       }
 
+      console.log("sddddddddddddddd",req.body);
       const isUserExist = await userDao.getUserById(userId);
       if (!isUserExist.data) {
         return res.status(200).json({
@@ -1010,7 +1011,7 @@ class UserService {
           })
         );
       } else {
-        newImageArray = horseDetail.images;
+        newImageArray = isHorseExist.data.images;
       }
 
       let doc = [];
@@ -1025,7 +1026,7 @@ class UserService {
           })
         );
       } else {
-        doc = horseDetail.horseDocument;
+        doc = isHorseExist.data.horseDocument;
       }
 
       const horseDetail = {

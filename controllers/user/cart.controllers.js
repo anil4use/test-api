@@ -35,6 +35,7 @@ class CartController {
       throw error;
     }
   }
+  
   //removeAppliedCoupon
   async removeAppliedCoupon(req, res) {
     try {

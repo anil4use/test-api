@@ -29,6 +29,7 @@ class ReviewAndWishListService {
         productId
       );
 
+      console.log("sdfffffffffff",isProductPurchase.data);
       if(!isProductPurchase.data){
         return res.status(404).json({
           message:"Please purchase this product first",
@@ -296,10 +297,27 @@ class ReviewAndWishListService {
           code: 201,
         });
       }
+
+
+      const isServicePurchase = await orderDao.getOrderByUserIdAndServiceId(
+        userId,
+        serviceId,
+      );
+
+      console.log("sdfffffffffff",isServicePurchase.data);
+      if(!isServicePurchase.data){
+        return res.status(404).json({
+          message:"Please purchase this service first",
+          success:"fail",
+          code:201,
+        })
+      }
+
       const isReviewExist = await serviceReviewDao.getServiceReview(
         serviceId,
         userId
       );
+
       let result;
       const data = {
         userId: userId,
